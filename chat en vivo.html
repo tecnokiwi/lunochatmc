@@ -119,12 +119,12 @@
 <body>
   <header>
     <span>💬 Lunova Chat</span>
-    <div><select id="ajusteFondo">
-  <option value="cover">Cubrir</option>
-  <option value="contain">Ajustar</option>
-  <option value="repeat">Repetir</option>
-</select>
-
+    <div>
+      <select id="ajusteFondo">
+        <option value="cover">Cubrir</option>
+        <option value="contain">Ajustar</option>
+        <option value="repeat">Repetir</option>
+      </select>
       <button id="temaBtn">🌙 Oscuro</button>
       <input type="file" id="bgInput" accept="image/*" style="display:none;">
       <button id="bgBtn">🖼 Fondo</button>
@@ -138,6 +138,7 @@
     <button id="enviar" type="submit">Enviar</button>
   </form>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     const formulario = document.getElementById('formulario');
     const input = document.getElementById('input');
@@ -146,20 +147,18 @@
     const body = document.body;
     const bgBtn = document.getElementById('bgBtn');
     const bgInput = document.getElementById('bgInput');
+    const ajusteFondo = document.getElementById('ajusteFondo');
 
-    // Obtener/guardar identificador de usuario
     let usuario = localStorage.getItem('usuarioLunova');
     if (!usuario) {
       usuario = "Usuario" + Math.floor(Math.random() * 10000);
       localStorage.setItem('usuarioLunova', usuario);
     }
 
-    // Obtener tema guardado
     let tema = localStorage.getItem('temaLunova') || 'claro';
     body.setAttribute('data-tema', tema);
     temaBtn.textContent = tema === 'claro' ? '🌙 Oscuro' : '☀️ Claro';
 
-    // Cambiar tema
     temaBtn.addEventListener('click', () => {
       const nuevoTema = body.getAttribute('data-tema') === 'claro' ? 'oscuro' : 'claro';
       body.setAttribute('data-tema', nuevoTema);
@@ -167,7 +166,6 @@
       temaBtn.textContent = nuevoTema === 'claro' ? '🌙 Oscuro' : '☀️ Claro';
     });
 
-    // Cargar fondo guardado
     const fondoGuardado = localStorage.getItem('fondoChatLunova');
     if (fondoGuardado) {
       chat.style.backgroundImage = `url(${fondoGuardado})`;
@@ -175,7 +173,6 @@
       chat.style.backgroundPosition = 'center';
     }
 
-    // Cambiar fondo personalizado
     bgBtn.addEventListener('click', () => {
       bgInput.click();
     });
@@ -194,14 +191,35 @@
       lector.readAsDataURL(archivo);
     });
 
-    // Mostrar mensajes (por ahora locales)
+    // Fondo ajuste
+    const fondoAjusteGuardado = localStorage.getItem('ajusteFondoLunova') || 'cover';
+    ajusteFondo.value = fondoAjusteGuardado;
+    chat.style.backgroundSize = fondoAjusteGuardado === 'repeat' ? 'auto' : fondoAjusteGuardado;
+    chat.style.backgroundRepeat = fondoAjusteGuardado === 'repeat' ? 'repeat' : 'no-repeat';
+    chat.style.backgroundPosition = 'center';
+
+    ajusteFondo.addEventListener('change', () => {
+      const ajuste = ajusteFondo.value;
+      chat.style.backgroundSize = ajuste === 'repeat' ? 'auto' : ajuste;
+      chat.style.backgroundRepeat = ajuste === 'repeat' ? 'repeat' : 'no-repeat';
+      chat.style.backgroundPosition = 'center';
+      localStorage.setItem('ajusteFondoLunova', ajuste);
+    });
+
+    // --- SOCKET.IO para mensajes en tiempo real ---
+    const socket = io();
+
     formulario.addEventListener('submit', function (e) {
       e.preventDefault();
       const mensajeTexto = input.value.trim();
       if (mensajeTexto) {
-        mostrarMensaje(usuario, mensajeTexto);
+        socket.emit('mensaje', { usuario, texto: mensajeTexto });
         input.value = '';
       }
+    });
+
+    socket.on('mensaje', ({ usuario: autor, texto }) => {
+      mostrarMensaje(autor, texto);
     });
 
     function mostrarMensaje(usuario, texto) {
@@ -220,24 +238,6 @@
       chat.appendChild(mensaje);
       chat.scrollTop = chat.scrollHeight;
     }
-    const ajusteFondo = document.getElementById('ajusteFondo');
-
-// Cargar ajuste guardado
-const fondoAjusteGuardado = localStorage.getItem('ajusteFondoLunova') || 'cover';
-ajusteFondo.value = fondoAjusteGuardado;
-chat.style.backgroundSize = fondoAjusteGuardado === 'repeat' ? 'auto' : fondoAjusteGuardado;
-chat.style.backgroundRepeat = fondoAjusteGuardado === 'repeat' ? 'repeat' : 'no-repeat';
-chat.style.backgroundPosition = 'center';
-
-// Cambiar ajuste manualmente
-ajusteFondo.addEventListener('change', () => {
-  const ajuste = ajusteFondo.value;
-  chat.style.backgroundSize = ajuste === 'repeat' ? 'auto' : ajuste;
-  chat.style.backgroundRepeat = ajuste === 'repeat' ? 'repeat' : 'no-repeat';
-  chat.style.backgroundPosition = 'center';
-  localStorage.setItem('ajusteFondoLunova', ajuste);
-});
-
   </script>
 </body>
 </html>
