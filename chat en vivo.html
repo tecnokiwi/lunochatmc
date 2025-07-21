@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lunova Chat</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #000000;
+      --chat-bg: #f9f9f9;
+      --input-bg: #ffffff;
+      --primary: #4a90e2;
+      --msg-bg: #e0e0e0;
+    }
+
+    [data-tema="oscuro"] {
+      --bg: #121212;
+      --text: #ffffff;
+      --chat-bg: #1f1f1f;
+      --input-bg: #2c2c2c;
+      --primary: #90caf9;
+      --msg-bg: #333333;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 15px;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header div {
+      display: flex;
+      gap: 10px;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      background: var(--chat-bg);
+      transition: background 0.3s;
+    }
+
+    .mensaje {
+      margin: 6px 0;
+      padding: 10px 14px;
+      background: var(--msg-bg);
+      border-radius: 12px;
+      max-width: 75%;
+      word-wrap: break-word;
+    }
+
+    .autor {
+      font-weight: bold;
+      font-size: 0.9em;
+      margin-bottom: 4px;
+    }
+
+    #formulario {
+      display: flex;
+      padding: 10px;
+      background: var(--chat-bg);
+    }
+
+    #input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    #enviar {
+      margin-left: 10px;
+      padding: 10px 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button, input[type="file"] {
+      cursor: pointer;
+    }
+
+    #temaBtn, #bgBtn {
+      background: transparent;
+      border: 1px solid white;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+    }
+
+    #enviar:hover, #temaBtn:hover, #bgBtn:hover {
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span>💬 Lunova Chat</span>
+    <div><select id="ajusteFondo">
+  <option value="cover">Cubrir</option>
+  <option value="contain">Ajustar</option>
+  <option value="repeat">Repetir</option>
+</select>
+
+      <button id="temaBtn">🌙 Oscuro</button>
+      <input type="file" id="bgInput" accept="image/*" style="display:none;">
+      <button id="bgBtn">🖼 Fondo</button>
+    </div>
+  </header>
+
+  <div id="chat"></div>
+
+  <form id="formulario">
+    <input id="input" autocomplete="off" placeholder="Escribe tu mensaje..." />
+    <button id="enviar" type="submit">Enviar</button>
+  </form>
+
+  <script>
+    const formulario = document.getElementById('formulario');
+    const input = document.getElementById('input');
+    const chat = document.getElementById('chat');
+    const temaBtn = document.getElementById('temaBtn');
+    const body = document.body;
+    const bgBtn = document.getElementById('bgBtn');
+    const bgInput = document.getElementById('bgInput');
+
+    // Obtener/guardar identificador de usuario
+    let usuario = localStorage.getItem('usuarioLunova');
+    if (!usuario) {
+      usuario = "Usuario" + Math.floor(Math.random() * 10000);
+      localStorage.setItem('usuarioLunova', usuario);
+    }
+
+    // Obtener tema guardado
+    let tema = localStorage.getItem('temaLunova') || 'claro';
+    body.setAttribute('data-tema', tema);
+    temaBtn.textContent = tema === 'claro' ? '🌙 Oscuro' : '☀️ Claro';
+
+    // Cambiar tema
+    temaBtn.addEventListener('click', () => {
+      const nuevoTema = body.getAttribute('data-tema') === 'claro' ? 'oscuro' : 'claro';
+      body.setAttribute('data-tema', nuevoTema);
+      localStorage.setItem('temaLunova', nuevoTema);
+      temaBtn.textContent = nuevoTema === 'claro' ? '🌙 Oscuro' : '☀️ Claro';
+    });
+
+    // Cargar fondo guardado
+    const fondoGuardado = localStorage.getItem('fondoChatLunova');
+    if (fondoGuardado) {
+      chat.style.backgroundImage = `url(${fondoGuardado})`;
+      chat.style.backgroundSize = 'cover';
+      chat.style.backgroundPosition = 'center';
+    }
+
+    // Cambiar fondo personalizado
+    bgBtn.addEventListener('click', () => {
+      bgInput.click();
+    });
+
+    bgInput.addEventListener('change', (e) => {
+      const archivo = e.target.files[0];
+      if (!archivo) return;
+      const lector = new FileReader();
+      lector.onload = function(evento) {
+        const url = evento.target.result;
+        chat.style.backgroundImage = `url(${url})`;
+        chat.style.backgroundSize = 'cover';
+        chat.style.backgroundPosition = 'center';
+        localStorage.setItem('fondoChatLunova', url);
+      };
+      lector.readAsDataURL(archivo);
+    });
+
+    // Mostrar mensajes (por ahora locales)
+    formulario.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const mensajeTexto = input.value.trim();
+      if (mensajeTexto) {
+        mostrarMensaje(usuario, mensajeTexto);
+        input.value = '';
+      }
+    });
+
+    function mostrarMensaje(usuario, texto) {
+      const mensaje = document.createElement('div');
+      mensaje.classList.add('mensaje');
+
+      const autor = document.createElement('div');
+      autor.classList.add('autor');
+      autor.textContent = usuario;
+
+      const contenido = document.createElement('div');
+      contenido.textContent = texto;
+
+      mensaje.appendChild(autor);
+      mensaje.appendChild(contenido);
+      chat.appendChild(mensaje);
+      chat.scrollTop = chat.scrollHeight;
+    }
+    const ajusteFondo = document.getElementById('ajusteFondo');
+
+// Cargar ajuste guardado
+const fondoAjusteGuardado = localStorage.getItem('ajusteFondoLunova') || 'cover';
+ajusteFondo.value = fondoAjusteGuardado;
+chat.style.backgroundSize = fondoAjusteGuardado === 'repeat' ? 'auto' : fondoAjusteGuardado;
+chat.style.backgroundRepeat = fondoAjusteGuardado === 'repeat' ? 'repeat' : 'no-repeat';
+chat.style.backgroundPosition = 'center';
+
+// Cambiar ajuste manualmente
+ajusteFondo.addEventListener('change', () => {
+  const ajuste = ajusteFondo.value;
+  chat.style.backgroundSize = ajuste === 'repeat' ? 'auto' : ajuste;
+  chat.style.backgroundRepeat = ajuste === 'repeat' ? 'repeat' : 'no-repeat';
+  chat.style.backgroundPosition = 'center';
+  localStorage.setItem('ajusteFondoLunova', ajuste);
+});
+
+  </script>
+</body>
+</html>
